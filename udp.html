@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+   /* UDP Server Code */ 
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#define PORT 9002
+
+void replace(char *str, char *word, char *replacement)
+{
+    char temp[1000];
+    char *pos;
+
+    while((pos = strstr(str, word)) != NULL)
+    {
+        strcpy(temp, pos + strlen(word));
+        *pos = '\0';
+        strcat(str, replacement);
+        strcat(str, temp);
+    }
+}
+
+int main()
+{
+    int sock;
+    char buffer[1000];
+    char choice[10];
+
+    struct sockaddr_in server, client;
+    socklen_t len;
+
+    /* Create UDP socket */
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    /* Server address */
+    server.sin_family = AF_INET;
+    server.sin_port = htons(PORT);
+    server.sin_addr.s_addr = INADDR_ANY;
+
+    /* Bind */
+    bind(sock, (struct sockaddr *)&server, sizeof(server));
+
+    printf("Server waiting for message...\n");
+
+    while(1)
+    {
+        /* Receive message */
+        len = sizeof(client);
+
+        recvfrom(sock, buffer, sizeof(buffer), 0,
+                 (struct sockaddr *)&client, &len);
+
+        printf("Received: %s", buffer);
+
+        /* Replace abbreviations */
+        replace(buffer, "tbh", "to be honest");
+        replace(buffer, "ig", "I guess");
+        replace(buffer, "idc", "I don't care");
+        replace(buffer, "tbf", "to be fair");
+        replace(buffer, "atm", "at the moment");
+        replace(buffer, "irl", "in real life");
+        replace(buffer, "lol", "laughing out loud");
+        replace(buffer, "asap", "as soon as possible");
+        replace(buffer, "omg", "oh my God");
+        replace(buffer, "ttyl", "talk to you later");
+        replace(buffer, "idk", "I don't know");
+        replace(buffer, "nvm", "never mind");
+
+        /* Send modified message */
+        sendto(sock, buffer, strlen(buffer) + 1, 0,
+               (struct sockaddr *)&client, len);
+
+        printf("Expanded message sent.\n");
+
+        /* Receive continue choice */
+        recvfrom(sock, choice, sizeof(choice), 0,
+                 (struct sockaddr *)&client, &len);
+
+        if(strncmp(choice, "no", 2) == 0)
+        {
+            printf("Client stopped the communication.\n");
+            break;
+        }
+
+        printf("Waiting for next message...\n");
+    }
+
+    close(sock);
+
+    return 0;
+}
+
+/*UDP Client Code */
+
+
+#include <stdio.h>
+#include <string.h>
+#include <unistd.h>
+#include <arpa/inet.h>
+#include <sys/socket.h>
+
+#define PORT 9002
+
+int main()
+{
+    int sock;
+    char buffer[1000];
+    char choice[10];
+
+    struct sockaddr_in server;
+    socklen_t len;
+
+    /* Create UDP socket */
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    /* Server address */
+    server.sin_family = AF_INET;
+    server.sin_port = htons(PORT);
+    server.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+    while(1)
+    {
+        /* Read sentence */
+        printf("Enter sentence: ");
+        fgets(buffer, sizeof(buffer), stdin);
+
+        /* Send message */
+        sendto(sock, buffer, strlen(buffer) + 1, 0,
+               (struct sockaddr *)&server, sizeof(server));
+
+        /* Receive expanded message */
+        len = sizeof(server);
+
+        recvfrom(sock, buffer, sizeof(buffer), 0,
+                 (struct sockaddr *)&server, &len);
+
+        printf("Expanded sentence: %s\n", buffer);
+
+        /* Ask whether to continue */
+        printf("Do you want to continue? (yes/no): ");
+        fgets(choice, sizeof(choice), stdin);
+
+        /* Send choice to server */
+        sendto(sock, choice, strlen(choice) + 1, 0,
+               (struct sockaddr *)&server, sizeof(server));
+
+        if(strncmp(choice, "no", 2) == 0)
+            break;
+    }
+
+    close(sock);
+
+    return 0;
+}
+</body>
+</html>
