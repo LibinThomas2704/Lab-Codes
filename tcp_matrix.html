@@ -26,15 +26,12 @@ void checkMatrix(int a[MAX][MAX], int n)
     {
         for (int j = 0; j < n; j++)
         {
-            /* Check upper triangular */
             if (i > j && a[i][j] != 0)
                 upper = 0;
 
-            /* Check lower triangular */
             if (i < j && a[i][j] != 0)
                 lower = 0;
 
-            /* Check diagonal */
             if (i != j && a[i][j] != 0)
                 diagonal = 0;
         }
@@ -58,6 +55,7 @@ int main()
 
     int n;
     int matrix[MAX][MAX];
+    char choice;
 
     server_sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -75,7 +73,6 @@ int main()
              sizeof(server)) < 0)
     {
         perror("Bind failed");
-        close(server_sock);
         return 1;
     }
 
@@ -86,37 +83,44 @@ int main()
     client_len = sizeof(client);
 
     client_sock = accept(server_sock,
-                         (struct sockaddr *)&client,
-                         &client_len);
-
-    if (client_sock < 0)
-    {
-        perror("Accept failed");
-        close(server_sock);
-        return 1;
-    }
+                          (struct sockaddr *)&client,
+                          &client_len);
 
     printf("Client connected\n");
 
-    /* Receive matrix size */
-    recv(client_sock, &n, sizeof(n), 0);
-
-    /* Receive matrix */
-    recv(client_sock, matrix, sizeof(matrix), 0);
-
-    printf("Matrix received:\n");
-
-    for (int i = 0; i < n; i++)
+    while (1)
     {
-        for (int j = 0; j < n; j++)
-        {
-            printf("%d ", matrix[i][j]);
-        }
-        printf("\n");
-    }
+        /* Receive matrix size */
+        if (recv(client_sock, &n, sizeof(n), 0) <= 0)
+            break;
 
-    /* Check matrix */
-    checkMatrix(matrix, n);
+        /* Receive matrix */
+        if (recv(client_sock, matrix, sizeof(matrix), 0) <= 0)
+            break;
+
+        printf("\nMatrix received:\n");
+
+        for (int i = 0; i < n; i++)
+        {
+            for (int j = 0; j < n; j++)
+            {
+                printf("%d ", matrix[i][j]);
+            }
+            printf("\n");
+        }
+
+        checkMatrix(matrix, n);
+
+        /* Receive choice */
+        if (recv(client_sock, &choice, sizeof(choice), 0) <= 0)
+            break;
+
+        if (choice == 'n' || choice == 'N')
+        {
+            printf("Client ended the session.\n");
+            break;
+        }
+    }
 
     close(client_sock);
     close(server_sock);
@@ -142,6 +146,7 @@ int main()
 
     int n;
     int matrix[MAX][MAX];
+    char choice;
 
     sock = socket(AF_INET, SOCK_STREAM, 0);
 
@@ -165,26 +170,40 @@ int main()
 
     printf("Connected to server.\n");
 
-    printf("Enter order of matrix: ");
-    scanf("%d", &n);
-
-    printf("Enter matrix elements:\n");
-
-    for (int i = 0; i < n; i++)
+    while (1)
     {
-        for (int j = 0; j < n; j++)
+        printf("\nEnter order of matrix: ");
+        scanf("%d", &n);
+
+        printf("Enter matrix elements:\n");
+
+        for (int i = 0; i < n; i++)
         {
-            scanf("%d", &matrix[i][j]);
+            for (int j = 0; j < n; j++)
+            {
+                scanf("%d", &matrix[i][j]);
+            }
+        }
+
+        /* Send matrix size */
+        send(sock, &n, sizeof(n), 0);
+
+        /* Send matrix */
+        send(sock, matrix, sizeof(matrix), 0);
+
+        printf("Matrix sent to server.\n");
+
+        printf("Do you want to continue? (y/n): ");
+        scanf(" %c", &choice);
+
+        /* Send choice */
+        send(sock, &choice, sizeof(choice), 0);
+
+        if (choice == 'n' || choice == 'N')
+        {
+            break;
         }
     }
-
-    /* Send matrix size */
-    send(sock, &n, sizeof(n), 0);
-
-    /* Send matrix */
-    send(sock, matrix, sizeof(matrix), 0);
-
-    printf("Matrix sent to server.\n");
 
     close(sock);
 
