@@ -79,7 +79,7 @@ int main()
         sendto(sock, buffer, strlen(buffer) + 1, 0,
                (struct sockaddr *)&client, len);
 
-        printf("Expanded message sent.\n");
+        printf("Expanded message sent: %s", buffer);
 
         /* Receive continue choice */
         recvfrom(sock, choice, sizeof(choice), 0,
